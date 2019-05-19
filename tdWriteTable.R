@@ -2,11 +2,49 @@
 tdWriteTable <- function(tdConnection, tableName, writeDF, primaryIndex = colnames(writeDF[1]),
                          append = FALSE, decimalDigits = 2, batchSize = 100000)
 {
-  ##Check if data frame
+  #tdConnection - An RJDBC connection with Teradata.
+  #tableName - A string complete name of table to create in Teradata.
+  #writeDF - A data frame or coercible to data frame table which is to be uploaded to Teradata.
+  #primaryIndex - A character vector or string separated by commas which provides the primary indices for the created table. Default first column of writeDF.
+  #append - Logical indicating if data should be appended to table. Default FALSE.
+  #decimalDigits - Integer indicating number of digits following the decimal point for numerics.
+  #batchSize - Integer indicating size of batches for the INSERT statement.
+  
+  ##Check correct data types.
   writeDF <- as.data.frame(writeDF, stringsAsFactors = FALSE)
   if(!is.data.frame(writeDF))
   {
-    stop("Table must be data frame or coercible to data frame")
+    stop("writeDF must be data frame or coercible to data frame.")
+  }
+  
+  tableName <- as.character(tableName)
+  if(!is.character(tableName))
+  {
+    stop("tableName must be character or coercible to character.")
+  }
+  if(length(tableName) != 1)
+  {
+    stop("tableName must have length 1.")
+  }
+  
+  decimalDigits <- as.integer(decimalDigits)
+  if(!is.integer(decimalDigits))
+  {
+    stop("decimalDigits must be integer or coercible to integer")
+  }
+  if(length(decimalDigits) != 1)
+  {
+    stop("decimalDigits must have length 1.")
+  }
+  
+  batchSize <- as.integer(batchSize)
+  if(!is.integer(batchSize))
+  {
+    stop("batchSize must be integer or coercible to integer")
+  }
+  if(length(batchSize) != 1)
+  {
+    stop("batchSize must have length 1.")
   }
   
   ##Ensure rJava is uploaded
@@ -57,30 +95,33 @@ tdWriteTable <- function(tdConnection, tableName, writeDF, primaryIndex = colnam
   colNames[colNames %in% tdReserved] <- paste0("\"", colNames[colNames %in% tdReserved], "\"")
   
   ##Make primary indices Teradata compliant
-  primaryIndex <- as.character(primaryIndex)
-  if(!is.character(primaryIndex))
+  if(!append)
   {
-    stop("primaryIndex must be character or coercible to character.")
-  }
-  primaryIndex <- strsplit(primaryIndex, ",")
-  tempIndex <- NULL
-  for(i in 1:length(primaryIndex))
-  {
-    tempIndex <- c(tempIndex, primaryIndex[[i]])
-  }
-  primaryIndex <- tempIndex
-  
-  primaryIndex <- primaryIndex(writeDF)
-  primaryIndex <- toupper(primaryIndex)
-  primaryIndex <- trimws(primaryIndex)
-  primaryIndex <- gsub("[[:space:]]", "_", primaryIndex)
-  primaryIndex <- gsub(".", "_", primaryIndex, fixed = TRUE)
-  primaryIndex <- gsub("[(){}]", "_", primaryIndex)
-  primaryIndex[primaryIndex %in% tdReserved] <- paste0("\"", primaryIndex[primaryIndex %in% tdReserved], "\"")
-  
-  if(!all(primaryIndex %in% colNames))
-  {
-    stop("primaryIndex must be in column names of writeDF")
+    primaryIndex <- as.character(primaryIndex)
+    if(!is.character(primaryIndex))
+    {
+      stop("primaryIndex must be character or coercible to character.")
+    }
+    primaryIndex <- strsplit(primaryIndex, ",")
+    tempIndex <- NULL
+    for(i in 1:length(primaryIndex))
+    {
+      tempIndex <- c(tempIndex, primaryIndex[[i]])
+    }
+    primaryIndex <- tempIndex
+    
+    primaryIndex <- primaryIndex(writeDF)
+    primaryIndex <- toupper(primaryIndex)
+    primaryIndex <- trimws(primaryIndex)
+    primaryIndex <- gsub("[[:space:]]", "_", primaryIndex)
+    primaryIndex <- gsub(".", "_", primaryIndex, fixed = TRUE)
+    primaryIndex <- gsub("[(){}]", "_", primaryIndex)
+    primaryIndex[primaryIndex %in% tdReserved] <- paste0("\"", primaryIndex[primaryIndex %in% tdReserved], "\"")
+    
+    if(!all(primaryIndex %in% colNames))
+    {
+      stop("primaryIndex must be in column names of writeDF")
+    }
   }
   
   ##Remove duplicate rows
