@@ -205,6 +205,8 @@ tdWriteTable <- function(tdConnection, tableName, writeDF, primaryIndex = colnam
   ##Timestamp
   isTimestamp <- strDF == "POSIXct" | strDF == "POSIXt"
   strDF[isTimestamp] <- "TIMESTAMP"
+  ##Empty
+  strDF[emptyCheck] <- "varchar (1)"
   
   ##Create empty table
   if(!append)
